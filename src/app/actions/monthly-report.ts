@@ -352,8 +352,14 @@ export async function generateAndSaveMonthlyReport(
     systemInstruction: systemPrompt,
     generationConfig: { temperature: 0.7 },
   });
-  const result = await model.generateContent(prompt);
-  const content = result.response.text();
+  let content: string;
+  try {
+    const result = await model.generateContent(prompt);
+    content = result.response.text();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`AI 보고서 생성 실패: ${msg}`);
+  }
 
   // DB upsert
   const { error: upsertErr } = await supabase

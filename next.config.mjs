@@ -5,11 +5,6 @@ const nextConfig = {
     // 외부 이미지 도메인이 필요할 경우 remotePatterns에 추가
     remotePatterns: [],
   },
-  experimental: {
-    serverActions: {
-      allowedOrigins: ["localhost:3000"],
-    },
-  },
 };
 
 export default nextConfig;
