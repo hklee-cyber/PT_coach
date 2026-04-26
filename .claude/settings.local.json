@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(ls D:/claude_task/PT_coach/src/app/mentor/students/[id]/)",
+      "Bash(ls D:/claude_task/PT_coach/src/app/admin/students/[id]/)",
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)",
+      "Bash(xargs grep:*)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('exports', {}\\), indent=2\\)\\)\")",
+      "Bash(npm show:*)",
+      "Bash(python -c \"import json,sys; v=json.load\\(sys.stdin\\); print\\('\\\\n'.join\\(v[-5:]\\)\\)\")",
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(npm list:*)",
+      "Bash(npm run:*)",
+      "Bash(npx next:*)"
+    ]
+  }
+}

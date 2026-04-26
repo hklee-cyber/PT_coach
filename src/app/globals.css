@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ── 인쇄 전용 스타일 ─────────────────────────────────────── */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  html, body {
+    background: white !important;
+    /* 브라우저가 콘텐츠를 1페이지에 맞게 자동 축소 */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 페이지 넘김 방지: 테이블 전체를 한 페이지 안에 */
+  .coaching-print-wrapper {
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* 코칭 테이블 전체 폰트/여백 축소 */
+  .coaching-print-table {
+    font-size: 7pt !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .coaching-print-table th,
+  .coaching-print-table td {
+    padding: 2px 4px !important;
+    line-height: 1.2 !important;
+  }
+
+  /* textarea → 인쇄 시 텍스트처럼 표시 */
+  .coaching-print-table textarea {
+    border: none !important;
+    background: transparent !important;
+    resize: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: unset !important;
+    padding: 1px 2px !important;
+    font-size: 7pt !important;
+    line-height: 1.2 !important;
+    white-space: pre-wrap;
+    display: block;
+    word-break: break-word;
+  }
+
+  /* 탐구 과목명 input → 인쇄 시 텍스트처럼 표시 */
+  .coaching-print-table input[type="text"] {
+    border: none !important;
+    background: transparent !important;
+    font-size: 7pt !important;
+    width: auto !important;
+    text-align: center;
+  }
+
+  /* 인쇄 헤더도 컴팩트하게 */
+  .coaching-print-header {
+    margin-bottom: 4px !important;
+    padding-bottom: 3px !important;
+  }
+}
