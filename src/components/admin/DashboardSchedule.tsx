@@ -6,6 +6,7 @@ import { SLOTS, DAYS, type DayOfWeek } from "@/lib/schedule";
 export interface ScheduleItem {
   student_id: string;
   student_name: string;
+  student_seat: string | null;
   mentor_id: string;
   mentor_name: string;
   day_of_week: DayOfWeek;
@@ -133,7 +134,14 @@ export default function DashboardSchedule({ schedules }: Props) {
 
                       {/* 학생 / 멘토 */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{item.student_name}</p>
+                        <p className="text-sm font-semibold text-gray-900 truncate flex items-center gap-1.5">
+                          {item.student_seat && (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 text-blue-600 text-[10px] font-bold border border-blue-100 shrink-0">
+                              {item.student_seat}
+                            </span>
+                          )}
+                          {item.student_name}
+                        </p>
                         <p className="text-xs text-gray-400 truncate">{item.mentor_name} 멘토</p>
                       </div>
 
@@ -301,7 +309,14 @@ export default function DashboardSchedule({ schedules }: Props) {
                 <li key={item.student_id} className="flex items-center gap-3 px-5 py-3">
                   <span className="text-xs font-semibold text-gray-300 w-5 shrink-0">{idx + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900">{item.student_name}</p>
+                    <p className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+                      {item.student_seat && (
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 text-blue-600 text-[10px] font-bold border border-blue-100 shrink-0">
+                          {item.student_seat}
+                        </span>
+                      )}
+                      {item.student_name}
+                    </p>
                     <p className="text-xs text-gray-400">{item.mentor_name} 멘토</p>
                   </div>
                   {now && (
