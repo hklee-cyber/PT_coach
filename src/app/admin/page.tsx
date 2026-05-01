@@ -41,7 +41,7 @@ export default async function AdminHomePage() {
   // 2) 활성 학생 정보
   const studentIds = rawRelations.map((r) => r.student_id);
   const { data: studentRows } = studentIds.length > 0
-    ? await supabase.from("students").select("id, name, status").in("id", studentIds).eq("status", "active")
+    ? await supabase.from("students").select("id, name, status, seat").in("id", studentIds).eq("status", "active")
     : { data: [] };
 
   // 3) 멘토 프로필
@@ -53,6 +53,7 @@ export default async function AdminHomePage() {
   // 4) 조합
   const activeIds  = new Set((studentRows ?? []).map((s) => s.id));
   const sNameMap   = Object.fromEntries((studentRows ?? []).map((s) => [s.id, s.name]));
+  const sSeatMap   = Object.fromEntries((studentRows ?? []).map((s) => [s.id, (s as { seat?: string | null }).seat ?? null]));
   const mNameMap   = Object.fromEntries((mentorRows  ?? []).map((m) => [m.id, m.full_name ?? ""]));
 
   const schedules: ScheduleItem[] = rawRelations
@@ -60,6 +61,7 @@ export default async function AdminHomePage() {
     .map((r) => ({
       student_id:   r.student_id,
       student_name: sNameMap[r.student_id] ?? "",
+      student_seat: sSeatMap[r.student_id] ?? null,
       mentor_id:    r.mentor_id,
       mentor_name:  mNameMap[r.mentor_id]  ?? "",
       day_of_week:  r.day_of_week as DayOfWeek,
