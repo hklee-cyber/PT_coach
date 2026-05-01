@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import type { Student } from "@/types/database";
+import type { Student, StudentStatus } from "@/types/database";
 
 // ──────────────────────────────────────────────────────────────
 // 설계 원칙 (데이터 보존 정책)
@@ -211,6 +211,73 @@ export async function deleteStudentAdmin(studentId: string): Promise<void> {
 
   if (error) throw new Error(error.message);
   revalidatePath("/admin/students");
+}
+
+/**
+ * [어드민 전용] 엑셀 데이터 일괄 upsert
+ *
+ * - 이름이 기존 학생과 일치하는 경우: seat만 업데이트
+ * - 이름이 없는 경우: 신규 학생 생성 (name, seat)
+ * - 결과로 변경된 전체 학생 목록을 반환
+ */
+export async function upsertStudentsFromExcel(
+  rows: { name: string; seat: string | null }[]
+): Promise<Student[]> {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const { data: profile } = await supabase
+    .from("profiles").select("role").eq("id", user.id).single();
+  if (profile?.role !== "admin") throw new Error("관리자만 엑셀 데이터를 업로드할 수 있습니다.");
+
+  // 현재 전체 학생 이름 목록 조회
+  const { data: existing } = await supabase
+    .from("students")
+    .select("id, name");
+
+  const existingMap = new Map<string, string>(
+    (existing ?? []).map((s) => [s.name.trim(), s.id])
+  );
+
+  const toUpdate: { id: string; seat: string | null }[] = [];
+  const toInsert: { name: string; seat: string | null; target_university: null; status: StudentStatus }[] = [];
+
+  for (const row of rows) {
+    const trimmedName = row.name.trim();
+    if (!trimmedName) continue;
+
+    if (existingMap.has(trimmedName)) {
+      toUpdate.push({ id: existingMap.get(trimmedName)!, seat: row.seat });
+    } else {
+      toInsert.push({ name: trimmedName, seat: row.seat, target_university: null, status: "active" });
+    }
+  }
+
+  // 기존 학생 seat 업데이트 (병렬)
+  await Promise.all(
+    toUpdate.map(({ id, seat }) =>
+      supabase.from("students").update({ seat }).eq("id", id)
+    )
+  );
+
+  // 신규 학생 일괄 삽입
+  if (toInsert.length > 0) {
+    const { error } = await supabase.from("students").insert(toInsert);
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath("/admin/students");
+
+  // 업데이트 후 전체 학생 목록 반환
+  const { data: updated, error: fetchError } = await supabase
+    .from("students")
+    .select("id, name, target_university, status, seat, created_at")
+    .order("name");
+
+  if (fetchError) throw new Error(fetchError.message);
+  return (updated ?? []) as Student[];
 }
 
 /**

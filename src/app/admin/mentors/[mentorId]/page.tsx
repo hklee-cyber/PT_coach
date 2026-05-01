@@ -38,11 +38,11 @@ export default async function AdminMentorStudentsPage({ params }: Props) {
     .order("created_at", { ascending: true });
 
   const studentIds = (relations ?? []).map((r) => r.student_id).filter(Boolean) as string[];
-  let students: { id: string; name: string; target_university: string | null; status: string }[] = [];
+  let students: { id: string; name: string; target_university: string | null; status: string; seat: string | null }[] = [];
   if (studentIds.length > 0) {
     const { data } = await supabase
       .from("students")
-      .select("id, name, target_university, status")
+      .select("id, name, target_university, status, seat")
       .in("id", studentIds);
     const map = new Map((data ?? []).map((s) => [s.id, s]));
     students = studentIds.map((id) => map.get(id)).filter(Boolean) as typeof students;
@@ -97,6 +97,7 @@ export default async function AdminMentorStudentsPage({ params }: Props) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400">좌석</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400">이름</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400">목표 대학</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400">코칭 시간</th>
@@ -110,6 +111,15 @@ export default async function AdminMentorStudentsPage({ params }: Props) {
                   if (!student) return null;
                   return (
                     <tr key={student.id} className={`hover:bg-gray-50/60 transition ${i !== sortedRelations.length - 1 ? "border-b border-gray-50" : ""}`}>
+                      <td className="px-5 py-3.5">
+                        {student.seat ? (
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold border border-blue-100">
+                            {student.seat}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 text-xs">—</span>
+                        )}
+                      </td>
                       <td className="px-5 py-3.5 font-medium text-gray-900">{student.name}</td>
                       <td className="px-5 py-3.5 text-gray-500">{student.target_university ?? <span className="text-gray-300">—</span>}</td>
                       <td className="px-5 py-3.5">

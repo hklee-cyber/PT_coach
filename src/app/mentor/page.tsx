@@ -116,7 +116,7 @@ export default async function MentorHomePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400">#</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400">좌석</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400">이름</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400">목표 대학</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400">코칭 시간</th>
@@ -125,7 +125,15 @@ export default async function MentorHomePage() {
               <tbody>
                 {students.map((s, i) => (
                   <tr key={s.id} className={`hover:bg-gray-50/70 transition ${i !== students.length - 1 ? "border-b border-gray-50" : ""}`}>
-                    <td className="px-5 py-3.5 text-gray-300 text-xs">{i + 1}</td>
+                    <td className="px-5 py-3.5">
+                      {s.seat ? (
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold border border-blue-100">
+                          {s.seat}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3.5">
                       <Link href={`/mentor/students/${s.id}`} className="font-semibold text-gray-900 hover:underline underline-offset-2">
                         {s.name}

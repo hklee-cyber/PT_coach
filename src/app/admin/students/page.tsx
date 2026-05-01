@@ -21,7 +21,7 @@ const fetchStudentsWithMentors = unstable_cache(
     const [{ data: students }, { data: relations }] = await Promise.all([
       supabase
         .from("students")
-        .select("id, name, target_university, status, created_at")
+        .select("id, name, target_university, status, seat, created_at")
         .order("name"),
       supabase
         .from("student_mentor_relations")
@@ -51,6 +51,7 @@ const fetchStudentsWithMentors = unstable_cache(
     return (students ?? []).map((s) => ({
       ...s,
       status: (s.status ?? "active") as "active" | "inactive",
+      seat: (s as Record<string, unknown>).seat as string | null ?? null,
       mentor_name: studentMentorMap[s.id]?.mentor_name ?? null,
       mentor_id: studentMentorMap[s.id]?.mentor_id ?? null,
     }));
@@ -65,6 +66,7 @@ export interface StudentWithMentor {
   name: string;
   target_university: string | null;
   status: "active" | "inactive";
+  seat: string | null;
   created_at: string;
   mentor_name: string | null;
   mentor_id: string | null;

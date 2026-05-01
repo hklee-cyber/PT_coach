@@ -103,7 +103,7 @@ export default function StudentList({ students: init, mentorId, assignedIds: ini
       // results에는 id/name/target_university만 있으므로 created_at을 채워서 추가
       const found = results.find((r) => r.id === selected.id);
       if (found) {
-        setStudents((prev) => [...prev, { ...found, status: "active" as const, created_at: new Date().toISOString() }]);
+        setStudents((prev) => [...prev, { ...found, status: "active" as const, seat: null, created_at: new Date().toISOString() }]);
         setAssigned((prev) => [...prev, selected.id]);
       }
       closeForm();
@@ -144,8 +144,8 @@ export default function StudentList({ students: init, mentorId, assignedIds: ini
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 w-[5%]">#</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 w-[28%]">이름</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 w-[8%]">좌석</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 w-[25%]">이름</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 w-[34%]">목표 대학</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 w-[17%]">등록일</th>
                 <th className="text-center px-6 py-3.5 text-xs font-semibold text-gray-500 w-[16%]">관리</th>
@@ -154,7 +154,15 @@ export default function StudentList({ students: init, mentorId, assignedIds: ini
             <tbody>
               {students.map((s, i) => (
                 <tr key={s.id} className={`hover:bg-gray-50 transition-colors ${i !== students.length - 1 ? "border-b border-gray-50" : ""}`}>
-                  <td className="px-6 py-4 text-gray-300 text-xs">{i + 1}</td>
+                  <td className="px-6 py-4">
+                    {s.seat ? (
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold border border-blue-100">
+                        {s.seat}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4">
                     <Link href={`/mentor/students/${s.id}`} className="font-semibold text-gray-900 hover:underline underline-offset-2">
                       {s.name}

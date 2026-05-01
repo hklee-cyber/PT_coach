@@ -58,7 +58,14 @@ export default async function StudentDetailPage({ params }: Props) {
       {/* 헤더 — 인쇄 시 숨김 */}
       <div className="print:hidden">
         <NavButtons backHref="/mentor" backLabel="학생 목록으로" mainHref="/mentor" mainLabel="메인으로" />
-        <h2 className="text-xl font-bold text-gray-900 mt-3">{student.name}</h2>
+        <div className="flex items-center gap-3 mt-3">
+          {student.seat && (
+            <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-blue-50 text-blue-600 text-sm font-bold border border-blue-100 shrink-0">
+              {student.seat}
+            </span>
+          )}
+          <h2 className="text-xl font-bold text-gray-900">{student.name}</h2>
+        </div>
         {student.target_university && (
           <p className="text-sm text-gray-500">목표 대학: {student.target_university}</p>
         )}

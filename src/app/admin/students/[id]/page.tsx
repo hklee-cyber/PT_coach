@@ -19,7 +19,7 @@ export default async function AdminStudentReportPage({ params }: Props) {
 
   const { data: student } = await supabase
     .from("students")
-    .select("id, name, target_university, status")
+    .select("id, name, target_university, status, seat")
     .eq("id", id)
     .single();
 
@@ -68,10 +68,15 @@ export default async function AdminStudentReportPage({ params }: Props) {
             mainHref="/admin"
             mainLabel="메인 대시보드로"
           />
-          <div className="flex items-end gap-3 mt-2">
+          <div className="flex items-center gap-3 mt-2">
+            {(student as { seat?: string | null }).seat && (
+              <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-blue-50 text-blue-600 text-sm font-bold border border-blue-100 shrink-0">
+                {(student as { seat?: string | null }).seat}
+              </span>
+            )}
             <h2 className="text-xl font-bold text-gray-900">{student.name}</h2>
             {student.target_university && (
-              <span className="text-sm text-gray-500 mb-0.5">목표: {student.target_university}</span>
+              <span className="text-sm text-gray-500">목표: {student.target_university}</span>
             )}
           </div>
           <div className="mt-2">

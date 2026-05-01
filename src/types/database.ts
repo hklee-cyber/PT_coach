@@ -24,6 +24,8 @@ export type Student = {
   target_university: string | null;
   /** "active" = 재원 중 | "inactive" = 퇴원 처리됨 (admin만 변경 가능) */
   status: StudentStatus;
+  /** 학원 좌석 번호 (엑셀 연동) */
+  seat: string | null;
   created_at: string;
   // mentor_id 제거: student_mentor_relations 테이블로 분리됨
 };
@@ -140,7 +142,7 @@ export type Database = {
       };
       students: {
         Row: Student;
-        Insert: Omit<Student, "id" | "created_at" | "status"> & { status?: StudentStatus };
+        Insert: Omit<Student, "id" | "created_at" | "status" | "seat"> & { status?: StudentStatus; seat?: string | null };
         Update: Partial<Omit<Student, "id" | "created_at">>;
         Relationships: [];
       };
