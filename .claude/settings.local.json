@@ -15,7 +15,9 @@
       "Bash(npm list:*)",
       "Bash(npm run:*)",
       "Bash(npx next:*)",
-      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(grep -E \"\\\\.tsx$\")",
+      "Bash(find:*)"
     ]
   }
 }

@@ -56,6 +56,28 @@ export type MonthlyReport = {
   created_at: string;
 };
 
+export type PtScheduleOverride = {
+  id: string;
+  student_id: string;
+  session_date: string; // ISO date "YYYY-MM-DD"
+  slot: number;
+  status: "취소";
+  created_at: string;
+};
+
+export type PtMakeupStatus = "대기" | "진행중" | "완료" | "취소";
+
+export type PtMakeup = {
+  id: string;
+  student_id: string;
+  mentor_id: string;
+  makeup_date: string; // ISO date "YYYY-MM-DD"
+  slot: number;
+  original_date: string | null;
+  status: PtMakeupStatus;
+  created_at: string;
+};
+
 // ── coaching_records.content jsonb 구조 ───────────────────
 
 // 과목별 세부 입력 항목
@@ -168,6 +190,18 @@ export type Database = {
         Row: MonthlyReport;
         Insert: Omit<MonthlyReport, "id" | "created_at" | "analysis_type"> & { analysis_type?: AnalysisType };
         Update: Partial<Omit<MonthlyReport, "id" | "created_at">>;
+        Relationships: [];
+      };
+      pt_schedule_overrides: {
+        Row: PtScheduleOverride;
+        Insert: Omit<PtScheduleOverride, "id" | "created_at"> & { status?: "취소" };
+        Update: Partial<Omit<PtScheduleOverride, "id" | "created_at">>;
+        Relationships: [];
+      };
+      pt_makeups: {
+        Row: PtMakeup;
+        Insert: Omit<PtMakeup, "id" | "created_at"> & { status?: PtMakeupStatus };
+        Update: Partial<Omit<PtMakeup, "id" | "created_at">>;
         Relationships: [];
       };
     };

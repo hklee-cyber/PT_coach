@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import * as XLSX from "xlsx";
-import { createStudentAdmin, deleteStudentAdmin, upsertStudentsFromExcel } from "@/app/actions/student";
+import { createStudentAdmin, deleteStudentAdmin, upsertStudentsFromExcel, updateStudentSeat } from "@/app/actions/student";
 import type { StudentWithMentor } from "@/app/admin/students/page";
 
 interface Props {
@@ -35,6 +35,10 @@ export default function StudentManagementList({ students: init }: Props) {
 
   // 검색
   const [search, setSearch] = useState("");
+
+  // 좌석 인라인 편집
+  const [editingSeatId, setEditingSeatId] = useState<string | null>(null);
+  const [editingSeatValue, setEditingSeatValue] = useState("");
 
   // 학생 추가 폼
   const [showForm, setShowForm] = useState(false);
@@ -78,6 +82,36 @@ export default function StudentManagementList({ students: init }: Props) {
     } finally {
       setBusy(null);
     }
+  }
+
+  // ── 좌석 인라인 편집 ─────────────────────────────────────────
+  function startEditSeat(s: StudentWithMentor) {
+    setEditingSeatId(s.id);
+    setEditingSeatValue(s.seat ?? "");
+  }
+
+  async function commitEditSeat(s: StudentWithMentor) {
+    if (editingSeatId !== s.id) return;
+    const newSeat = editingSeatValue.trim() || null;
+    setEditingSeatId(null);
+    if (newSeat === (s.seat ?? null)) return; // 변경 없음
+    setBusy(s.id);
+    try {
+      const updated = await updateStudentSeat(s.id, newSeat);
+      setList((prev) =>
+        prev.map((r) => (r.id === s.id ? { ...r, seat: updated.seat } : r))
+      );
+      showToast(`'${s.name}' 좌석이 ${newSeat ?? "삭제"}되었습니다.`, true);
+      router.refresh();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "좌석 수정 실패", false);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function cancelEditSeat() {
+    setEditingSeatId(null);
   }
 
   // ── 학생 추가 ────────────────────────────────────────────────
@@ -314,12 +348,39 @@ export default function StudentManagementList({ students: init }: Props) {
                 >
                   {/* 좌석 */}
                   <td className="px-5 py-3.5">
-                    {s.seat ? (
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold border border-blue-100">
-                        {s.seat}
-                      </span>
+                    {editingSeatId === s.id ? (
+                      <input
+                        autoFocus
+                        value={editingSeatValue}
+                        onChange={(e) => setEditingSeatValue(e.target.value)}
+                        onBlur={() => commitEditSeat(s)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.currentTarget.blur(); }
+                          if (e.key === "Escape") { cancelEditSeat(); }
+                        }}
+                        placeholder="A1"
+                        className="w-14 px-2 py-1 border border-blue-300 rounded-lg text-xs font-bold text-blue-600
+                          bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 text-center"
+                      />
                     ) : (
-                      <span className="text-gray-300 text-xs">—</span>
+                      <button
+                        onClick={() => startEditSeat(s)}
+                        title="클릭하여 좌석 수정"
+                        disabled={busy === s.id}
+                        className="group relative"
+                      >
+                        {s.seat ? (
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold border border-blue-100
+                            group-hover:bg-blue-100 group-hover:border-blue-300 transition-colors">
+                            {s.seat}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-300 text-xs border border-dashed border-gray-200
+                            group-hover:border-blue-300 group-hover:text-blue-400 transition-colors">
+                            +
+                          </span>
+                        )}
+                      </button>
                     )}
                   </td>
 

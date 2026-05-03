@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ShieldCheck, Users2, GraduationCap, FileText } from "lucide-react";
-import DashboardSchedule, { type ScheduleItem } from "@/components/admin/DashboardSchedule";
+import DashboardSchedule, {
+  type ScheduleItem,
+  type ScheduleOverride,
+  type MakeupSession,
+} from "@/components/admin/DashboardSchedule";
 import type { DayOfWeek } from "@/lib/schedule";
 
 export default async function AdminHomePage() {
@@ -29,32 +33,40 @@ export default async function AdminHomePage() {
 
   const missingReportCount = Math.max(0, (activeStudentCount ?? 0) - (reportDoneCount ?? 0));
 
+  // ── 2주 날짜 범위 계산 (이번 주 월요일 ~ 다음 주 토요일) ──────
+
+  const dow = now.getDay(); // 0=일
+  const daysFromMon = dow === 0 ? 6 : dow - 1;
+  const thisMonday = new Date(now);
+  thisMonday.setDate(now.getDate() - daysFromMon);
+  const nextSaturday = new Date(thisMonday);
+  nextSaturday.setDate(thisMonday.getDate() + 12); // 2주 = 14일 중 Mon~Sat(12 days span)
+
+  const dateFrom = thisMonday.toISOString().split("T")[0];
+  const dateTo   = nextSaturday.toISOString().split("T")[0];
+
   // ── 주간 스케줄 데이터 ─────────────────────────────────────
 
-  // 1) 전체 배정 관계
   const { data: relations } = await supabase
     .from("student_mentor_relations")
     .select("student_id, mentor_id, day_of_week, slot");
 
   const rawRelations = relations ?? [];
 
-  // 2) 활성 학생 정보
   const studentIds = rawRelations.map((r) => r.student_id);
   const { data: studentRows } = studentIds.length > 0
     ? await supabase.from("students").select("id, name, status, seat").in("id", studentIds).eq("status", "active")
     : { data: [] };
 
-  // 3) 멘토 프로필
   const mentorIds = rawRelations.map((r) => r.mentor_id);
   const { data: mentorRows } = mentorIds.length > 0
     ? await supabase.from("profiles").select("id, full_name").in("id", mentorIds)
     : { data: [] };
 
-  // 4) 조합
-  const activeIds  = new Set((studentRows ?? []).map((s) => s.id));
-  const sNameMap   = Object.fromEntries((studentRows ?? []).map((s) => [s.id, s.name]));
-  const sSeatMap   = Object.fromEntries((studentRows ?? []).map((s) => [s.id, (s as { seat?: string | null }).seat ?? null]));
-  const mNameMap   = Object.fromEntries((mentorRows  ?? []).map((m) => [m.id, m.full_name ?? ""]));
+  const activeIds = new Set((studentRows ?? []).map((s) => s.id));
+  const sNameMap: Record<string, string>          = Object.fromEntries((studentRows ?? []).map((s) => [s.id, s.name]));
+  const sSeatMap: Record<string, string | null>   = Object.fromEntries((studentRows ?? []).map((s) => [s.id, (s as { seat?: string | null }).seat ?? null]));
+  const mNameMap: Record<string, string>          = Object.fromEntries((mentorRows  ?? []).map((m) => [m.id, m.full_name ?? ""]));
 
   const schedules: ScheduleItem[] = rawRelations
     .filter((r) => activeIds.has(r.student_id))
@@ -67,6 +79,83 @@ export default async function AdminHomePage() {
       day_of_week:  r.day_of_week as DayOfWeek,
       slot:         r.slot as number,
     }));
+
+  // ── 취소 오버라이드 (2주 범위) ─────────────────────────────
+
+  const { data: overridesRaw } = await supabase
+    .from("pt_schedule_overrides")
+    .select("id, student_id, session_date, slot, status")
+    .gte("session_date", dateFrom)
+    .lte("session_date", dateTo);
+
+  const overrides: ScheduleOverride[] = (overridesRaw ?? []).map((o) => ({
+    id:           o.id,
+    student_id:   o.student_id,
+    session_date: o.session_date as string,
+    slot:         o.slot as number,
+    status:       o.status as "취소",
+  }));
+
+  // ── 보강 세션 (2주 범위) ──────────────────────────────────
+
+  const { data: makeupsRaw } = await supabase
+    .from("pt_makeups")
+    .select("id, student_id, mentor_id, makeup_date, slot, original_date, status")
+    .gte("makeup_date", dateFrom)
+    .lte("makeup_date", dateTo);
+
+  // 보강에 등장하는 학생/멘토 중 기존 map에 없는 경우 추가 조회
+  const muStudentIds = Array.from(new Set((makeupsRaw ?? []).map((m) => m.student_id as string)));
+  const muMentorIds  = Array.from(new Set((makeupsRaw ?? []).map((m) => m.mentor_id  as string)));
+
+  const missingStudentIds = muStudentIds.filter((id) => !sNameMap[id]);
+  const missingMentorIds  = muMentorIds.filter((id)  => !mNameMap[id]);
+
+  if (missingStudentIds.length > 0) {
+    const { data: extra } = await supabase
+      .from("students")
+      .select("id, name, seat")
+      .in("id", missingStudentIds);
+    (extra ?? []).forEach((s) => {
+      sNameMap[s.id] = s.name;
+      sSeatMap[s.id] = (s as { seat?: string | null }).seat ?? null;
+    });
+  }
+  if (missingMentorIds.length > 0) {
+    const { data: extra } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", missingMentorIds);
+    (extra ?? []).forEach((m) => {
+      mNameMap[m.id] = m.full_name ?? "";
+    });
+  }
+
+  const makeupSessions: MakeupSession[] = (makeupsRaw ?? []).map((m) => ({
+    id:           m.id,
+    student_id:   m.student_id,
+    student_name: sNameMap[m.student_id] ?? "",
+    student_seat: sSeatMap[m.student_id] ?? null,
+    mentor_id:    m.mentor_id,
+    mentor_name:  mNameMap[m.mentor_id]  ?? "",
+    makeup_date:  m.makeup_date as string,
+    slot:         m.slot as number,
+    original_date: m.original_date as string | null,
+    status:       m.status as MakeupSession["status"],
+  }));
+
+  // ── 전체 멘토 목록 (보강 멘토 선택용) ─────────────────────
+
+  const { data: allMentorsData } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .eq("role", "mentor")
+    .order("full_name");
+
+  const allMentors = (allMentorsData ?? []).map((m) => ({
+    id:        m.id,
+    full_name: m.full_name ?? "",
+  }));
 
   // ── 상단 카드 정의 ─────────────────────────────────────────
 
@@ -146,7 +235,13 @@ export default async function AdminHomePage() {
       </div>
 
       {/* 하단: 실시간 일정 섹션 */}
-      <DashboardSchedule schedules={schedules} />
+      <DashboardSchedule
+        schedules={schedules}
+        overrides={overrides}
+        makeups={makeupSessions}
+        mentors={allMentors}
+        serverDate={new Date().toISOString()}
+      />
     </div>
   );
 }

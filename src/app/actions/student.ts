@@ -281,6 +281,39 @@ export async function upsertStudentsFromExcel(
 }
 
 /**
+ * [어드민 전용] 학생 좌석 번호 업데이트
+ */
+export async function updateStudentSeat(
+  studentId: string,
+  seat: string | null
+): Promise<Student> {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const { data: profile } = await supabase
+    .from("profiles").select("role").eq("id", user.id).single();
+  if (profile?.role !== "admin") throw new Error("관리자만 좌석을 수정할 수 있습니다.");
+
+  const { data, error } = await supabase
+    .from("students")
+    .update({ seat: seat || null })
+    .eq("id", studentId)
+    .select()
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? "좌석 업데이트 실패");
+
+  revalidatePath("/admin/students");
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath("/admin");
+  revalidatePath("/mentor");
+
+  return data as Student;
+}
+
+/**
  * 학생 이름 검색 (기존 학생 불러오기용)
  * - 재원 중(active) 학생만 반환 (퇴원 학생은 검색 결과에 포함하지 않음)
  */

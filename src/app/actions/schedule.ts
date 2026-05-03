@@ -113,6 +113,86 @@ export async function assignStudentSchedule(
   revalidatePath(`/admin/mentors/${mentorId}`);
 }
 
+// ── 수업 취소 토글 (특정 날짜) ───────────────────────────────
+export async function toggleCancelSession(
+  studentId: string,
+  sessionDate: string,
+  slot: number
+): Promise<void> {
+  const supabase = await requireAdmin();
+
+  const { data: existing } = await supabase
+    .from("pt_schedule_overrides")
+    .select("id")
+    .eq("student_id", studentId)
+    .eq("session_date", sessionDate)
+    .eq("slot", slot)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .from("pt_schedule_overrides")
+      .delete()
+      .eq("id", existing.id);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase
+      .from("pt_schedule_overrides")
+      .insert({ student_id: studentId, session_date: sessionDate, slot, status: "취소" });
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath("/admin");
+}
+
+// ── 보강 세션 등록 ───────────────────────────────────────────
+export async function addMakeupSession(
+  studentId: string,
+  mentorId: string,
+  makeupDate: string,
+  slot: number,
+  originalDate?: string
+): Promise<void> {
+  const supabase = await requireAdmin();
+
+  const { error } = await supabase
+    .from("pt_makeups")
+    .insert({
+      student_id: studentId,
+      mentor_id: mentorId,
+      makeup_date: makeupDate,
+      slot,
+      original_date: originalDate ?? null,
+      status: "대기",
+    });
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin");
+}
+
+// ── 보강 세션 삭제 ───────────────────────────────────────────
+export async function deleteMakeupSession(makeupId: string): Promise<void> {
+  const supabase = await requireAdmin();
+  const { error } = await supabase.from("pt_makeups").delete().eq("id", makeupId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin");
+}
+
+// ── 보강 세션 수정 ───────────────────────────────────────────
+export async function updateMakeupSession(
+  makeupId: string,
+  data: { makeup_date: string; slot: number; mentor_id: string }
+): Promise<void> {
+  const supabase = await requireAdmin();
+  const { error } = await supabase
+    .from("pt_makeups")
+    .update({ makeup_date: data.makeup_date, slot: data.slot, mentor_id: data.mentor_id })
+    .eq("id", makeupId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin");
+}
+
 // ── 스케줄 배정 해제 ─────────────────────────────────────────
 export async function removeStudentSchedule(studentId: string): Promise<void> {
   const supabase = await requireAdmin();
