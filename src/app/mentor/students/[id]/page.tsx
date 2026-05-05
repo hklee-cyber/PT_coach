@@ -16,7 +16,7 @@ export default async function StudentDetailPage({ params }: Props) {
   // → getUser() 및 profiles 중복 조회 제거
   const hdrs = await headers();
   const userId   = hdrs.get("x-user-id") ?? "";
-  const userName = hdrs.get("x-user-name") ?? "";
+  const userName = decodeURIComponent(hdrs.get("x-user-name") ?? "");
 
   const supabase = await createClient();
 

@@ -16,7 +16,7 @@ export default async function MentorLayout({
 }) {
   const hdrs = await headers();
   const role = hdrs.get("x-user-role") as Role;
-  const userName = hdrs.get("x-user-name") ?? "";
+  const userName = decodeURIComponent(hdrs.get("x-user-name") ?? "");
 
   if (!role) redirect("/login");
 

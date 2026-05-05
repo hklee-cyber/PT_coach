@@ -92,7 +92,7 @@ export async function middleware(request: NextRequest) {
   return buildResponse({
     "x-user-id":   user.id,
     "x-user-role": role,
-    "x-user-name": profile?.full_name ?? "",
+    "x-user-name": encodeURIComponent(profile?.full_name ?? ""),
   });
 }
 

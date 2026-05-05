@@ -16,7 +16,7 @@ export default async function AdminLayout({
 }) {
   const hdrs = await headers();
   const role = hdrs.get("x-user-role");
-  const userName = hdrs.get("x-user-name") ?? "";
+  const userName = decodeURIComponent(hdrs.get("x-user-name") ?? "");
 
   if (role !== "admin") redirect("/mentor");
 
