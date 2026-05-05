@@ -1,29 +1,19 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
 
-// 루트(/) 접근 시 역할에 따라 적절한 홈으로 분기
+/**
+ * 루트(/) 접근 시 역할에 따라 적절한 홈으로 분기
+ *
+ * 미들웨어가 이미 getUser() + profiles 조회를 완료하고
+ * x-user-role 헤더에 결과를 주입해 두므로
+ * 여기서는 DB 재조회 없이 헤더만 읽습니다.
+ */
 export default async function RootPage() {
-  const supabase = await createClient();
+  const hdrs = await headers();
+  const role = hdrs.get("x-user-role");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role === "admin") {
-    redirect("/admin");
-  } else if (profile?.role === "mentor") {
-    redirect("/mentor");
-  } else {
-    redirect("/pending");
-  }
+  if (!role) redirect("/login");
+  if (role === "admin") redirect("/admin");
+  if (role === "mentor") redirect("/mentor");
+  redirect("/pending");
 }

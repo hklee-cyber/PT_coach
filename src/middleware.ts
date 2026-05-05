@@ -12,74 +12,92 @@ const ADMIN_ONLY_PATHS = ["/admin"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  console.time(`[mw] ${pathname}`);
 
-  // ── 0. 항상 공개인 경로는 즉시 통과 ─────────────────
+  const { supabase, buildResponse } = createMiddlewareClient(request);
+
+  // ── 0. 항상 공개인 경로 ────────────────────────────────────
   if (ALWAYS_PUBLIC.some((p) => pathname.startsWith(p))) {
-    const { supabase, supabaseResponse } = await createMiddlewareClient(request);
-    // 세션 쿠키 갱신만 수행하고, role이 있는 승인 유저가 /pending에 오면 홈으로
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (user) {
       const { data: profile } = await supabase
-        .from("profiles").select("role").eq("id", user.id).single();
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
       if (profile?.role) {
+        console.timeEnd(`[mw] ${pathname}`);
         return NextResponse.redirect(new URL("/", request.url));
       }
     }
-    return supabaseResponse;
+    console.timeEnd(`[mw] ${pathname}`);
+    return buildResponse();
   }
 
-  const { supabase, supabaseResponse } = await createMiddlewareClient(request);
-
-  // 세션 갱신 (중요: getUser()를 반드시 호출해야 쿠키가 최신 상태로 유지됨)
+  // ── 1. 유저 인증 확인 ────────────────────────────────────────
+  console.time(`[mw:getUser] ${pathname}`);
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  console.timeEnd(`[mw:getUser] ${pathname}`);
 
-  // ── 1. 비로그인 사용자 처리 ──────────────────────────
   if (!user) {
     if (GUEST_ONLY_PATHS.some((p) => pathname.startsWith(p))) {
-      return supabaseResponse;
+      console.timeEnd(`[mw] ${pathname}`);
+      return buildResponse();
     }
+    console.timeEnd(`[mw] ${pathname}`);
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // ── 2. 로그인 사용자가 비로그인 전용 경로 접근 시 홈으로 ──
+  // 로그인한 유저가 게스트 전용 경로 접근 시 홈으로
   if (GUEST_ONLY_PATHS.some((p) => pathname.startsWith(p))) {
+    console.timeEnd(`[mw] ${pathname}`);
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // ── 3. 역할(role) 조회 ───────────────────────────────
+  // ── 2. 프로필 조회 (role + full_name 한 번에) ────────────────
+  // 이 데이터를 request header에 주입해 레이아웃/페이지의 중복 조회를 제거
+  console.time(`[mw:profile] ${pathname}`);
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, full_name")
     .eq("id", user.id)
     .single();
+  console.timeEnd(`[mw:profile] ${pathname}`);
 
   const role = profile?.role;
 
-  // ── 4. role 없음(승인 대기) → 모든 경로 차단, /pending으로 ──
+  // ── 3. role 없음(승인 대기) → /pending ──────────────────────
   if (!role) {
+    console.timeEnd(`[mw] ${pathname}`);
     return NextResponse.redirect(new URL("/pending", request.url));
   }
 
-  // ── 5. admin 전용 경로 접근 권한 확인 ────────────────
+  // ── 4. admin 전용 경로 권한 확인 ────────────────────────────
   if (ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p))) {
     if (role !== "admin") {
+      console.timeEnd(`[mw] ${pathname}`);
       return NextResponse.redirect(new URL("/mentor", request.url));
     }
   }
 
-  return supabaseResponse;
+  console.timeEnd(`[mw] ${pathname}`);
+
+  // ── 5. role·이름을 request header에 주입 ────────────────────
+  // 서버 컴포넌트(레이아웃·페이지)에서 headers()로 읽어
+  // DB 재조회 없이 사용자 정보를 활용할 수 있음
+  return buildResponse({
+    "x-user-id":   user.id,
+    "x-user-role": role,
+    "x-user-name": profile?.full_name ?? "",
+  });
 }
 
 export const config = {
   matcher: [
-    /*
-     * 아래 경로를 제외한 모든 요청에 미들웨어 적용:
-     * - _next/static (정적 파일)
-     * - _next/image (이미지 최적화)
-     * - favicon.ico, 이미지 파일 등
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

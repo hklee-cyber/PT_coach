@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
@@ -14,6 +14,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error,    setError]    = useState<string | null>(null);
   const [loading,  setLoading]  = useState(false);
+
+  // 로그아웃 후 클라이언트 사이드 네비게이션으로 돌아왔을 때
+  // 브라우저 자동완성이 채워 넣은 값을 React 상태로 덮어씁니다.
+  useEffect(() => {
+    setName("");
+    setPassword("");
+    setError(null);
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -79,7 +87,7 @@ export default function LoginPage() {
               id="name"
               type="text"
               required
-              autoComplete="name"
+              autoComplete="off"
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -97,7 +105,7 @@ export default function LoginPage() {
               id="password"
               type="password"
               required
-              autoComplete="current-password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="비밀번호를 입력하세요"

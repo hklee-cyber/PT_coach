@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import TodaySchedule from "@/components/mentor/TodaySchedule";
 import PasswordChangeForm from "@/components/mentor/PasswordChangeForm";
@@ -6,20 +7,18 @@ import { DAY_INDEX_MAP, type DayOfWeek } from "@/lib/schedule";
 import type { Student } from "@/types/database";
 
 export default async function MentorHomePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // 미들웨어가 주입한 헤더에서 사용자 정보를 읽음
+  // → getUser() 및 profiles 중복 조회 제거
+  const hdrs = await headers();
+  const userId   = hdrs.get("x-user-id") ?? "";
+  const userName = hdrs.get("x-user-name") ?? "";
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", user!.id)
-    .single();
+  const supabase = await createClient();
 
   // ── 오늘 요일 (서버 기준) ─────────────────────────────────
   const todayDay = DAY_INDEX_MAP[new Date().getDay()] as DayOfWeek | null;
 
   // ── 오늘 담당 슬롯 조회 ───────────────────────────────────
-  // student_mentor_relations에서 오늘 요일에 배정된 학생 가져오기
   type SlotRow = {
     slot: number;
     student_id: string | null;
@@ -33,7 +32,7 @@ export default async function MentorHomePage() {
     const { data: relations } = await supabase
       .from("student_mentor_relations")
       .select("slot, student_id")
-      .eq("mentor_id", user!.id)
+      .eq("mentor_id", userId)
       .eq("day_of_week", todayDay)
       .not("slot", "is", null);
 
@@ -46,7 +45,7 @@ export default async function MentorHomePage() {
 
       const studentMap = new Map((studentRows ?? []).map((s) => [s.id, s]));
       todaySlots = relations.map((r) => ({
-        slot: r.slot as number, // .not("slot", "is", null) ensures non-null
+        slot: r.slot as number,
         student_id: r.student_id,
         student_name: studentMap.get(r.student_id!)?.name ?? null,
         target_university: studentMap.get(r.student_id!)?.target_university ?? null,
@@ -54,11 +53,11 @@ export default async function MentorHomePage() {
     }
   }
 
-  // ── 전체 담당 학생 목록 (읽기 전용) ──────────────────────
+  // ── 전체 담당 학생 목록 ──────────────────────────────────
   const { data: relations } = await supabase
     .from("student_mentor_relations")
     .select("student_id, day_of_week, slot, created_at")
-    .eq("mentor_id", user!.id)
+    .eq("mentor_id", userId)
     .order("created_at", { ascending: true });
 
   let students: (Student & { day_of_week: string | null; slot: number | null })[] = [];
@@ -87,7 +86,7 @@ export default async function MentorHomePage() {
       <div>
         <p className="text-sm text-gray-400 font-medium mb-1">뉴퍼센트 멘토 대시보드</p>
         <h2 className="text-2xl font-bold text-gray-900">
-          {profile?.full_name ?? ""} 멘토님, 안녕하세요
+          {userName} 멘토님, 안녕하세요
         </h2>
       </div>
 
@@ -95,7 +94,7 @@ export default async function MentorHomePage() {
       <TodaySchedule today={todayDay} slots={todaySlots} />
 
       {/* 비밀번호 변경 */}
-      <PasswordChangeForm mentorName={profile?.full_name ?? ""} />
+      <PasswordChangeForm mentorName={userName} />
 
       {/* 전체 담당 학생 (읽기 전용) */}
       <div className="space-y-3">

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import NavButtons from "@/components/ui/NavButtons";
 import CoachingForm from "@/components/mentor/CoachingForm";
@@ -10,11 +11,14 @@ interface Props {
 
 export default async function StudentDetailPage({ params }: Props) {
   const { id } = await params;
-  const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // 미들웨어가 주입한 헤더에서 사용자 정보를 읽음
+  // → getUser() 및 profiles 중복 조회 제거
+  const hdrs = await headers();
+  const userId   = hdrs.get("x-user-id") ?? "";
+  const userName = hdrs.get("x-user-name") ?? "";
+
+  const supabase = await createClient();
 
   // 학생 정보 (RLS로 본인 담당만 조회됨)
   const { data: student } = await supabase
@@ -24,13 +28,6 @@ export default async function StudentDetailPage({ params }: Props) {
     .single();
 
   if (!student) notFound();
-
-  // 멘토 이름
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", user!.id)
-    .single();
 
   // 전체 코칭 기록 — 날짜 역순 (최신 → 오래된 순)
   const { data: rawRecords } = await supabase
@@ -74,8 +71,8 @@ export default async function StudentDetailPage({ params }: Props) {
       {/* 코칭 입력 폼 */}
       <CoachingForm
         studentId={student.id}
-        mentorId={user!.id}
-        mentorName={profile?.full_name ?? ""}
+        mentorId={userId}
+        mentorName={userName}
         studentName={student.name}
         targetUniversity={student.target_university ?? null}
         allRecords={allRecords}
