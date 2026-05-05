@@ -281,14 +281,14 @@ export default function MentorManagementList({
         {mentorList.length === 0 ? (
           <p className="text-sm text-gray-400">등록된 멘토가 없습니다.</p>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-2xl border border-indigo-100 overflow-hidden shadow-sm">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 w-[18%]">이름</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 w-[28%]">비밀번호</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 w-[16%]">가입일</th>
-                  <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 w-[12%]">담당 학생</th>
+                <tr className="border-b border-indigo-100 bg-indigo-50">
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-indigo-500 w-[18%]">이름</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-indigo-500 w-[28%]">비밀번호</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-indigo-500 w-[16%]">가입일</th>
+                  <th className="text-center px-5 py-3 text-xs font-semibold text-indigo-500 w-[12%]">담당 학생</th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
@@ -301,13 +301,15 @@ export default function MentorManagementList({
                   return (
                     <tr
                       key={u.id}
-                      className={`align-middle ${i !== mentorList.length - 1 ? "border-b border-gray-50" : ""}`}
+                      className={`align-middle transition-colors hover:bg-indigo-50/40 ${
+                        i % 2 === 1 ? "bg-slate-50/60" : "bg-white"
+                      } ${i !== mentorList.length - 1 ? "border-b border-indigo-50" : ""}`}
                     >
                       {/* 이름 */}
                       <td className="px-5 py-3.5">
                         <Link
                           href={`/admin/mentors/${u.id}`}
-                          className="font-medium text-gray-900 hover:underline underline-offset-2"
+                          className="font-semibold text-indigo-700 hover:underline underline-offset-2"
                         >
                           {u.full_name ?? "—"}
                         </Link>
@@ -378,13 +380,15 @@ export default function MentorManagementList({
                       </td>
 
                       {/* 가입일 */}
-                      <td className="px-5 py-3.5 text-gray-400 text-sm">
+                      <td className="px-5 py-3.5 text-slate-400 text-sm">
                         {formatDate(u.created_at)}
                       </td>
 
                       {/* 담당 학생 수 */}
-                      <td className="px-5 py-3.5 text-center text-gray-500">
-                        {u.studentCount}명
+                      <td className="px-5 py-3.5 text-center">
+                        <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-semibold">
+                          {u.studentCount}명
+                        </span>
                       </td>
 
                       {/* 액션 */}

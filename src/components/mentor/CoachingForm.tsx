@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { saveCoachingRecord } from "@/app/actions/coaching-record";
+import { saveCoachingRecord, deleteCoachingRecord } from "@/app/actions/coaching-record";
 import WordExportButton from "@/components/mentor/WordExportButton";
 import {
   EMPTY_CONTENT,
@@ -440,6 +440,7 @@ export default function CoachingForm({
           records={allRecords}
           studentName={studentName}
           mentorName={mentorName}
+          studentId={studentId}
           onClose={() => setShowPTRecordsModal(false)}
         />
       )}
@@ -590,14 +591,35 @@ function PTRecordsModal({
   records,
   studentName,
   mentorName,
+  studentId,
   onClose,
 }: {
   records: HistoryRecord[];
   studentName: string;
   mentorName: string;
+  studentId: string;
   onClose: () => void;
 }) {
   const [selected, setSelected] = useState<HistoryRecord | null>(null);
+  const [localRecords, setLocalRecords] = useState<HistoryRecord[]>(records);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteConfirm = async () => {
+    if (!confirmId) return;
+    setDeletingId(confirmId);
+    setConfirmId(null);
+    setDeleteError(null);
+    try {
+      await deleteCoachingRecord(confirmId, studentId);
+      setLocalRecords((prev) => prev.filter((r) => r.id !== confirmId));
+    } catch {
+      setDeleteError("삭제에 실패했습니다. 다시 시도해 주세요.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <ModalWrapper onClose={onClose}>
@@ -637,9 +659,16 @@ function PTRecordsModal({
           </button>
         </div>
 
+        {/* 오류 메시지 */}
+        {deleteError && (
+          <div className="mx-5 mt-3 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 shrink-0">
+            {deleteError}
+          </div>
+        )}
+
         {/* 내용 */}
         <div className="overflow-auto flex-1">
-          {records.length === 0 ? (
+          {localRecords.length === 0 ? (
             <div className="flex items-center justify-center h-40">
               <p className="text-sm text-gray-400">PT 코칭 내용이 존재하지 않습니다.</p>
             </div>
@@ -649,7 +678,7 @@ function PTRecordsModal({
             </div>
           ) : (
             <ul className="divide-y divide-gray-50">
-              {records.map((rec, idx) => (
+              {localRecords.map((rec, idx) => (
                 <li key={rec.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition">
                   <button
                     type="button"
@@ -657,7 +686,7 @@ function PTRecordsModal({
                     className="flex items-center gap-3 flex-1 text-left"
                   >
                     <span className="text-xs font-semibold text-gray-400 w-8 shrink-0">
-                      {records.length - idx}회
+                      {localRecords.length - idx}회
                     </span>
                     <span className="text-sm font-medium text-gray-800">{rec.date}</span>
                     {idx === 0 && (
@@ -667,12 +696,20 @@ function PTRecordsModal({
                     )}
                     <span className="ml-auto text-xs text-blue-500 font-medium">상세 보기 →</span>
                   </button>
-                  <div className="ml-3 shrink-0">
+                  <div className="ml-3 shrink-0 flex items-center gap-2">
                     <WordExportButton
                       record={rec}
                       studentName={studentName}
                       mentorName={mentorName}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setConfirmId(rec.id)}
+                      disabled={deletingId === rec.id}
+                      className="px-2.5 py-1 text-xs font-medium rounded-lg border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      {deletingId === rec.id ? "삭제 중…" : "삭제"}
+                    </button>
                   </div>
                 </li>
               ))}
@@ -681,14 +718,40 @@ function PTRecordsModal({
         </div>
 
         {/* 푸터 */}
-        {!selected && records.length > 0 && (
+        {!selected && localRecords.length > 0 && (
           <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 shrink-0">
             <p className="text-xs text-gray-400 text-center">
-              총 {records.length}회차 기록
+              총 {localRecords.length}회차 기록
             </p>
           </div>
         )}
       </div>
+
+      {/* 삭제 확인 모달 */}
+      {confirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm mx-4 p-6">
+            <p className="text-sm font-semibold text-gray-900 mb-2">PT 코칭 기록 삭제</p>
+            <p className="text-sm text-gray-500 mb-6">정말 이 PT 코칭 기록을 삭제하시겠습니까?<br />삭제된 기록은 복구할 수 없습니다.</p>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmId(null)}
+                className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </ModalWrapper>
   );
 }
