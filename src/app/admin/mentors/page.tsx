@@ -2,6 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import NavButtons from "@/components/ui/NavButtons";
 import MentorManagementList from "@/components/admin/MentorManagementList";
+import MentorScheduleTable, {
+  type DayScheduleData,
+  type MentorDaySchedule,
+} from "@/components/admin/MentorScheduleTable";
+import { DAYS } from "@/lib/schedule";
 
 /** auth.users 에서 created_at 일괄 조회 */
 async function getCreatedAtMap(ids: string[]): Promise<Record<string, string>> {
@@ -54,6 +59,64 @@ export default async function AdminMentorsListPage() {
   ];
   const createdAtMap = await getCreatedAtMap(allIds);
 
+  // ── 요일/교시별 배정 현황 데이터 ──────────────────────────────────
+  interface SmrRow {
+    mentor_id: string;
+    day_of_week: string | null;
+    slot: number | null;
+    students: { name: string } | null;
+  }
+  const { data: smrRaw } = await supabase
+    .from("student_mentor_relations")
+    .select("mentor_id, day_of_week, slot, students(name)")
+    .not("day_of_week", "is", null)
+    .not("slot", "is", null);
+  const smrData = (smrRaw ?? []) as unknown as SmrRow[];
+
+  // mentorId → 이름 맵 (mentorProfiles 재사용)
+  const mentorNameMap: Record<string, string> = {};
+  (mentorProfiles ?? []).forEach((p) => {
+    mentorNameMap[p.id] = p.full_name ?? "—";
+  });
+
+  // scheduleMap[day][mentorId][slot] = studentNames[]
+  const scheduleMap: Record<string, Record<string, Record<number, string[]>>> = {};
+  smrData.forEach((row) => {
+    const day = row.day_of_week as string;
+    const slot = row.slot as number;
+    const mentorId = row.mentor_id;
+    const studentName = row.students?.name ?? "?";
+
+    if (!scheduleMap[day]) scheduleMap[day] = {};
+    if (!scheduleMap[day][mentorId]) {
+      scheduleMap[day][mentorId] = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+    }
+    (scheduleMap[day][mentorId][slot] ??= []).push(studentName);
+  });
+
+  const scheduleByDay: DayScheduleData[] = DAYS.map((day) => {
+    const mentorMap = scheduleMap[day] ?? {};
+    const mentorRows: MentorDaySchedule[] = Object.entries(mentorMap)
+      .map(([mentorId, periods]) => ({
+        mentorId,
+        mentorName: mentorNameMap[mentorId] ?? "—",
+        periods,
+      }))
+      .sort((a, b) => a.mentorName.localeCompare(b.mentorName, "ko"));
+
+    const totalStudents = mentorRows.reduce(
+      (sum, m) => sum + Object.values(m.periods).flat().length,
+      0
+    );
+
+    return {
+      day,
+      mentors: mentorRows,
+      totalMentors: mentorRows.length,
+      totalStudents,
+    };
+  });
+
   const mentors = (mentorProfiles ?? []).map((p) => ({
     id: p.id,
     full_name: p.full_name,
@@ -75,6 +138,8 @@ export default async function AdminMentorsListPage() {
         <h2 className="text-xl font-bold text-gray-900 mt-2">멘토 관리</h2>
         <p className="text-sm text-gray-500">멘토 계정 관리 및 가입 신청을 승인합니다.</p>
       </div>
+      <MentorScheduleTable scheduleByDay={scheduleByDay} />
+
       <MentorManagementList
         mentors={mentors}
         pendingUsers={pendingUsers}
