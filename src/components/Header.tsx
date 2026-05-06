@@ -26,7 +26,7 @@ export default function Header({ userName, role }: HeaderProps) {
   const onAdminPage = pathname.startsWith("/admin");
 
   return (
-    <header className="bg-white border-b border-gray-200">
+    <header className="bg-white border-b border-gray-200 print:hidden">
       <div className="w-[95%] max-w-[1500px] mx-auto px-4 h-16 flex items-center justify-between">
         {/* 좌측: 로고 + 역할 배지 + 네비게이션 */}
         <div className="flex items-center gap-4">

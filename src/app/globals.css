@@ -40,14 +40,38 @@
 @media print {
   @page {
     size: A4 landscape;
-    margin: 8mm;
+    margin: 5mm;
   }
 
   html, body {
     background: white !important;
-    /* 브라우저가 콘텐츠를 1페이지에 맞게 자동 축소 */
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    /* overflow 해제: 스크롤 내부 내용 잘림 방지 */
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* 모든 스크롤 컨테이너의 overflow 해제 */
+  * {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* 레이아웃 래퍼들: 여백 제거 및 너비 최대화 */
+  body > div,
+  main,
+  .min-h-screen {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* 1페이지 강제 맞춤: 전체 콘텐츠를 용지에 축소 */
+  body {
+    transform-origin: top left;
+    zoom: 65%;
   }
 
   /* 페이지 넘김 방지: 테이블 전체를 한 페이지 안에 */
@@ -58,6 +82,7 @@
     border-radius: 0 !important;
     page-break-inside: avoid;
     break-inside: avoid;
+    width: 100% !important;
   }
 
   /* 코칭 테이블 전체 폰트/여백 축소 */
